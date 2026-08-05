@@ -1,9 +1,10 @@
 # SH1MMER Wax Docker Image
 
-Dockerized version of the [MercuryWorkshop/sh1mmer](https://github.com/MercuryWorkshop/sh1mmer) `wax` tooling.  
-This lets you inject SH1MMER payloads into a raw RMA factory shim without installing the dependencies on your host system.
+Fully self-contained Docker image for the [MercuryWorkshop/sh1mmer](https://github.com/MercuryWorkshop/sh1mmer) `wax` tooling.
 
-The container runs `wax/wax.sh` and modifies the provided shim **in place**.
+This image includes everything needed for normal SH1MMER injection, legacy payloads, Chromebrew/Devshim builds, and Br0ker-style update payloads.
+
+The container runs `wax/wax.sh` by default and modifies the provided shim **in place**.
 
 > **Warning**: The operation is destructive. Always keep a clean backup of your original RMA shim.
 
@@ -11,7 +12,7 @@ The container runs `wax/wax.sh` and modifies the provided shim **in place**.
 
 ## Supported Boards
 
-`grunt` (and all other boards listed in the upstream README) are supported:
+Including **grunt**:
 
 ```
 ambassador, banon, brask, brya, clapper, coral, corsola, cyan, dedede,
@@ -23,35 +24,27 @@ trogdor, ultima, volteer, zork
 
 ---
 
-## Build
+## Quick Start
 
-```bash
-docker build -t sh1mmer-wax .
-```
-
----
-
-## Usage
-
-Mount a directory that contains your raw RMA shim, then run the container with `--privileged` (required for loop devices).
-
-### Basic Beautiful World shim
+### Basic Beautiful World shim (recommended for most users)
 
 ```bash
 docker run --rm --privileged \
   -v /path/to/your/shim/folder:/data \
-  sh1mmer-wax -i /data/your_rma_shim.bin
+  ghcr.io/mcMineyC/sh1mmer-waxer-docker:latest \
+  -i /data/your_rma_shim.bin
 ```
 
-### Legacy payload
+### Legacy payload (for advanced users, but easier to update)
 
 ```bash
 docker run --rm --privileged \
   -v /path/to/your/shim/folder:/data \
-  sh1mmer-wax -i /data/your_rma_shim.bin -p legacy
+  ghcr.io/mcMineyC/sh1mmer-waxer-docker:latest \
+  -i /data/your_rma_shim.bin -p legacy
 ```
 
-### Dev-shim style (larger Chromebrew + desktop environment)
+### Chromebrew / Devshim
 
 A Chromebrew tarball can be obtained via the below command:
 
@@ -65,16 +58,28 @@ And for a dev tarball:
 wget "https://web.archive.org/web/20230324140756id_/https://dl.sh1mmer.me/build-tools/chromebrew/chromebrew-dev.tar.gz"
 ```
 
+Place the downloaded tarball in the same folder as your shim, then run:
 
-Place `chromebrew-dev.tar.gz` (or `chromebrew.tar.gz`) in the same folder as the shim:
+**Normal Chromebrew** (`-s 4G`):
 
 ```bash
 docker run --rm --privileged \
   -v /path/to/your/shim/folder:/data \
-  sh1mmer-wax \
-    -i /data/your_rma_shim.bin \
-    --chromebrew /data/chromebrew-dev.tar.gz \
-    -s 7G
+  ghcr.io/mcMineyC/sh1mmer-waxer-docker:latest \
+  -i /data/your_rma_shim.bin \
+  --chromebrew /data/chromebrew.tar.gz \
+  -s 4G
+```
+
+**Devshim** (`-s 7G`):
+
+```bash
+docker run --rm --privileged \
+  -v /path/to/your/shim/folder:/data \
+  ghcr.io/mcMineyC/sh1mmer-waxer-docker:latest \
+  -i /data/your_rma_shim.bin \
+  --chromebrew /data/chromebrew-dev.tar.gz \
+  -s 7G
 ```
 
 ### Other useful flags
@@ -83,21 +88,40 @@ docker run --rm --privileged \
 |------|-------------|
 | `-i <path>` | Path to the RMA shim (required) |
 | `-p bw\|legacy` | Main payload (default: `bw`) |
-| `-s SIZE` | SH1MMER partition size (default `72M`) |
-| `--chromebrew <tar.gz>` | Include Chromebrew (use `-s 4G` for normal, or `-s 7G` for dev) |
+| `-s SIZE` | SH1MMER partition size |
+| `--chromebrew <tar.gz>` | Include Chromebrew |
 | `-d` | Enable debug output |
 | `--fast` | Skip shrink/squash (larger image) |
 
 All flags are passed directly to `wax.sh`.
+
+## Building Locally
+
+If you prefer to build the image yourself instead of pulling from GHCR:
+
+```bash
+git clone https://github.com/mcMineyC/sh1mmer-waxer-docker.git
+cd sh1mmer-waxer-docker
+docker build -t sh1mmer-wax .
+```
+
+Then run it the same way, replacing the image name:
+
+```bash
+docker run --rm --privileged \
+  -v /path/to/your/shim/folder:/data \
+  sh1mmer-wax -i /data/your_rma_shim.bin
+```
 
 ---
 
 ## Notes
 
 - Only genuine **raw RMA factory shims** work. Recovery images from cros.download will fail.
-- The shim is modified in place. The finished SH1MMER image will appear in the same directory you mounted.
-- On some hosts you may need additional `--device` flags for loop devices, but `--privileged` is usually sufficient.
-- For Br0ker-style update payloads you will need extra packages and to run `update_downloader.sh` first.
+- Always use `--privileged` (loop devices are required).
+- The finished SH1MMER image appears in the same directory you mounted.
+- Image is based on Debian Bookworm + the `beautifulworld` branch of sh1mmer.
+- All credit for this tool goes to MercuryWorkshop, I just poorly wrapped their scripts in a Docker container
 
 ---
 
